@@ -9,6 +9,8 @@
   const app = express();
   app.use(express.json());
   app.use(cors());
+  app.use('/pdfs', express.static('pdfs'));
+
 
   const SECRET_KEY = process.env.SECRET_KEY || 'utesa_local';
 
@@ -47,10 +49,10 @@
 
 
   app.post('/projects', async (req, res) => {
-    const { title, author, career, year, fileUrl } = req.body;
+    const { title, author, career, year, fileUrl, summary } = req.body;
 
     try {
-      const [result] = await db.query('INSERT INTO projects (title, author, career, year, fileUrl) VALUES (?, ?, ?, ?, ?)', [title, author, career, year, fileUrl]);
+      const [result] = await db.query('INSERT INTO projects (title, author, career, year, fileUrl, summary) VALUES (?, ?, ?, ?, ?, ?)', [title, author, career, year, fileUrl, summary]);
 
       console.log(result);
 
@@ -107,10 +109,11 @@
 
   app.put('/projects/:id', async (req, res) => {
     const { id } = req.params;
-    const { title, description } = req.body;
+    const { title, author, career, year, fileUrl, summary } = req.body;
 
     try {
-      const [result] = await db.query('UPDATE projects SET title = ?, description = ? WHERE id = ?', [title, description, id]);
+      const [result] = await db.query('UPDATE projects SET title = ?, author = ?, career = ?, year = ?, fileUrl = ?, summary = ? WHERE id = ?',
+      [title, author, career, year, fileUrl, summary, id]);
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: 'Proyecto no encontrado' });
       }

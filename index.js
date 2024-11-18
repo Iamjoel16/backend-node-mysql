@@ -27,12 +27,22 @@ const authenticateTokenWithRole = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) return res.sendStatus(401); 
+  if (!token) {
+    console.log('Token no proporcionado');
+    return res.status(401).json({ message: 'No autorizado. Token no proporcionado.' });
+  }
 
   jwt.verify(token, SECRET_KEY, async (err, user) => {
-    if (err) return res.sendStatus(403);
+    if (err) {
+      console.log('Token inválido:', err); 
+      return res.status(403).json({ message: 'No autorizado. Token inválido.' });
+    }
+
     const [rows] = await db.query('SELECT * FROM admin_users WHERE id = ?', [user.id]);
-    if (rows.length === 0) return res.sendStatus(403); 
+    if (rows.length === 0) {
+      console.log('Usuario no encontrado en la base de datos'); 
+      return res.status(403).json({ message: 'No autorizado. Usuario no encontrado.' });
+    }
 
     req.user = rows[0]; 
     next();
@@ -80,16 +90,22 @@ app.get('/projects', authenticateTokenWithRole, verifyRole(1), async (req, res) 
 app.post('/projects', authenticateTokenWithRole, verifyRole(3), async (req, res) => {
   const { title, author, career, year, fileUrl, summary } = req.body;
 
+  console.log('Datos recibidos para crear proyecto:', req.body); 
+
   try {
-    const [result] = await db.query('INSERT INTO projects (title, author, career, year, fileUrl, summary) VALUES (?, ?, ?, ?, ?, ?)', [title, author, career, year, fileUrl, summary]);
+    const [result] = await db.query(
+      'INSERT INTO projects (title, author, career, year, fileUrl, summary) VALUES (?, ?, ?, ?, ?, ?)',
+      [title, author, career, year, fileUrl, summary]
+    );
 
-    console.log(result);
-
+    console.log('Proyecto creado con éxito:', result); 
     res.status(201).json({ message: 'Proyecto creado', projectId: result.insertId });
   } catch (error) {
-    res.status(500).json({ error: error });
+    console.error('Error al crear el proyecto:', error);
+    res.status(500).json({ error: 'Error al crear el proyecto.' });
   }
 });
+
 
 app.get('/projects/:id', authenticateTokenWithRole, verifyRole(1), async (req, res) => {
   const { id } = req.params;

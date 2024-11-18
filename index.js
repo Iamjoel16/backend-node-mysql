@@ -79,10 +79,14 @@ app.get('/docente', authenticateTokenWithRole, verifyRole(2), (req, res) => {
 });
 
 app.get('/projects', authenticateTokenWithRole, verifyRole(1), async (req, res) => {
+  const userRole = req.user.access_level;
+  console.log(`Usuario con nivel de acceso ${userRole} solicitando proyectos`);
+
   try {
     const [rows] = await db.query('SELECT * FROM projects');
     res.json(rows);
   } catch (error) {
+    console.error('Error al obtener los proyectos:', error);
     res.status(500).json({ error: 'Error al obtener los proyectos' });
   }
 });

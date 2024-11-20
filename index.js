@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(cors());
 app.use('/pdfs', express.static('pdfs'));
 
-const SECRET_KEY = process.env.SECRET_KEY || 'utesa_local';
+const SECRET_KEY = process.env.SECRET_KEY || '';
 
 const verifyRole = (requiredLevel) => {
   return (req, res, next) => {
@@ -111,10 +111,10 @@ app.post('/projects', authenticateTokenWithRole, verifyRole(3), async (req, res)
 });
 
 
-app.get('/projects/:id', authenticateTokenWithRole, verifyRole(1), async (req, res) => {
+app.get('/projects/:id', authenticateTokenWithRole, verifyRole(2), async (req, res) => {
   const { id } = req.params;
 
-  console.log(`Obteniendo proyecto con ID: ${id}`); // Verificar ID recibido
+  console.log(`Obteniendo proyecto con ID: ${id}`); 
 
   try {
     const [rows] = await db.query('SELECT * FROM projects WHERE id = ?', [id]);
@@ -124,7 +124,7 @@ app.get('/projects/:id', authenticateTokenWithRole, verifyRole(1), async (req, r
       return res.status(404).json({ message: 'Proyecto no encontrado' });
     }
 
-    res.json(rows[0]); // Devuelve el proyecto encontrado
+    res.json(rows[0]); 
   } catch (error) {
     console.error(`Error al obtener el proyecto con ID ${id}:`, error);
     res.status(500).json({ error: 'Error al obtener el proyecto' });
@@ -133,8 +133,8 @@ app.get('/projects/:id', authenticateTokenWithRole, verifyRole(1), async (req, r
 
 app.put('/projects/:id', authenticateTokenWithRole, verifyRole(3), async (req, res) => {
   const { id } = req.params;
-  console.log(`ID recibido para actualizar: ${id}`); // Verificar ID recibido
-  console.log('Datos recibidos para actualizar:', req.body); // Verificar datos enviados
+  console.log(`ID recibido para actualizar: ${id}`); 
+  console.log('Datos recibidos para actualizar:', req.body); 
 
   const { title, author, career, year, fileUrl, summary } = req.body;
 
@@ -173,7 +173,7 @@ app.delete('/projects/:id', authenticateTokenWithRole, verifyRole(3), async (req
   }
 });
 
-app.post('/searchProject', authenticateTokenWithRole, verifyRole(1), async (req, res) => {
+app.post('/searchProject', async (req, res) => {
   const { title, career, year, author } = req.body;
 
   let query = 'SELECT * FROM projects WHERE 1=1';

@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(cors());
 app.use('/pdfs', express.static('pdfs'));
 
-const SECRET_KEY = process.env.SECRET_KEY || '';
+const SECRET_KEY = process.env.SECRET_KEY || 'utesa-local';
 
 const verifyRole = (requiredLevel) => {
   return (req, res, next) => {
@@ -156,9 +156,6 @@ app.put('/projects/:id', authenticateTokenWithRole, verifyRole(3), async (req, r
   }
 });
 
-
-
-
 app.delete('/projects/:id', authenticateTokenWithRole, verifyRole(3), async (req, res) => {
   const { id } = req.params;
 
@@ -210,6 +207,43 @@ app.post('/searchProject', async (req, res) => {
   } catch (error) {
     console.error('Error al buscar los proyectos:', error);
     res.status(500).json({ error: 'Error al buscar los proyectos' });
+  }
+});
+
+app.get('/careers', authenticateTokenWithRole, verifyRole(3), async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM careers');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error al obtener las carreras:', error);
+    res.status(500).json({ error: 'Error al obtener las carreras.' });
+  }
+});
+
+app.post('/careers', authenticateTokenWithRole, verifyRole(3), async (req, res) => {
+  const { name } = req.body;
+
+  try {
+    const [result] = await db.query('INSERT INTO careers (name) VALUES (?)', [name]);
+    res.status(201).json({ message: 'Carrera añadida con éxito', careerId: result.insertId });
+  } catch (error) {
+    console.error('Error al añadir la carrera:', error);
+    res.status(500).json({ error: 'Error al añadir la carrera.' });
+  }
+});
+
+app.delete('/careers/:id', authenticateTokenWithRole, verifyRole(3), async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [result] = await db.query('DELETE FROM careers WHERE id = ?', [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Carrera no encontrada.' });
+    }
+    res.json({ message: 'Carrera eliminada con éxito.' });
+  } catch (error) {
+    console.error('Error al eliminar la carrera:', error);
+    res.status(500).json({ error: 'Error al eliminar la carrera.' });
   }
 });
 

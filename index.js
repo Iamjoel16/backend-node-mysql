@@ -210,7 +210,7 @@ app.post('/searchProject', async (req, res) => {
   }
 });
 
-app.get('/careers', authenticateTokenWithRole, verifyRole(3), async (req, res) => {
+app.get('/careers', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM careers');
     res.json(rows);

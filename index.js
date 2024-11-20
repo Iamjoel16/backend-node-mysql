@@ -48,27 +48,37 @@ const authenticateTokenWithRole = (req, res, next) => {
     next();
   });
 };
-
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
-  let data;
-
   try {
-    await db.query('SELECT * FROM admin_users WHERE username = ?', [username]).then((res) => (data = res));
-  } catch (e) {
-    res.json({ message: 'cannot find' });
-  }
+    const [rows] = await db.query('SELECT * FROM admin_users WHERE username = ?', [username]);
 
-  const { id: idDb, username: userDb, password: passDb, access_level } = data[0][0] || [];
+    if (rows.length === 0) {
+      return res.status(401).json({ message: 'Usuario o contraseña incorrecta.' });
+    }
 
-  if (password === passDb) {
-    const token = jwt.sign({ id: idDb, username: userDb, access_level }, SECRET_KEY, { expiresIn: '1h' });
-    return res.json({ token });
-  } else {
-    return res.status(401).json({ message: 'Usuario o contraseña incorrecta' });
+    const user = rows[0];
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Usuario o contraseña incorrecta.' });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, access_level: user.access_level },
+      SECRET_KEY,
+      { expiresIn: '1h' }
+    );
+
+    res.json({ token });
+  } catch (error) {
+    console.error('Error en el inicio de sesión:', error);
+    res.status(500).json({ message: 'Error en el servidor.' });
   }
 });
+
 
 app.get('/admin', authenticateTokenWithRole, verifyRole(3), (req, res) => {
   res.send('Bienvenido al Panel de Administración');
@@ -247,6 +257,35 @@ app.delete('/careers/:id', authenticateTokenWithRole, verifyRole(3), async (req,
   }
 });
 
+app.post('/admin_users', authenticateTokenWithRole, verifyRole(3), async (req, res) => {
+  const { username, password, access_level } = req.body;
+
+  if (!username || !password || !access_level) {
+    return res.status(400).json({ message: 'Todos los campos son obligatorios.' });
+  }
+
+  try {
+    const [existingUser] = await db.query('SELECT * FROM admin_users WHERE username = ?', [username]);
+    if (existingUser.length > 0) {
+      return res.status(409).json({ message: 'El nombre de usuario ya existe.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const [result] = await db.query(
+      'INSERT INTO admin_users (username, password, access_level) VALUES (?, ?, ?)',
+      [username, hashedPassword, access_level]
+    );
+
+    res.status(201).json({
+      message: 'Usuario creado exitosamente.',
+      userId: result.insertId,
+    });
+  } catch (error) {
+    console.error('Error al añadir usuario:', error);
+    res.status(500).json({ message: 'Error al añadir usuario.' });
+  }
+});
 
 app.get('/health', (req, res) => {
   res.status(200).json({ message: 'Ok' });
